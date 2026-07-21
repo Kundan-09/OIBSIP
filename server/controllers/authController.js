@@ -1,12 +1,13 @@
 const User = require("../models/User");
 const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
 
-// Register User
+// ================= REGISTER USER =================
 const registerUser = async (req, res) => {
   try {
     const { name, email, password } = req.body;
 
-    // Check existing user
+    // Check if user already exists
     const existingUser = await User.findOne({ email });
 
     if (existingUser) {
@@ -16,20 +17,23 @@ const registerUser = async (req, res) => {
       });
     }
 
-    // Encrypt password
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    // Save user
+    // Create new user
+    // Password will be hashed automatically by User model pre-save middleware
     const user = await User.create({
       name,
       email,
-      password: hashedPassword,
+      password,
     });
 
     res.status(201).json({
       success: true,
       message: "User Registered Successfully",
-      user,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+      },
     });
 
   } catch (error) {
@@ -40,4 +44,79 @@ const registerUser = async (req, res) => {
   }
 };
 
-module.exports = { registerUser };
+
+// ================= LOGIN USER =================
+const loginUser = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    // Find user using email
+    const user = await User.findOne({ email });
+
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid email or password",
+      });
+    }
+
+    // Compare entered password with hashed password
+    const isPasswordMatch = await bcrypt.compare(
+      password,
+      user.password
+    );
+
+    if (!isPasswordMatch) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid email or password",
+      });
+    }
+
+    // Generate JWT token after successful login
+    const token = jwt.sign(
+      {
+        id: user._id,
+        role: user.role,
+      },
+      process.env.JWT_SECRET,
+      {
+        expiresIn: "7d",
+      }
+    );
+
+    // Send user details and token
+    res.status(200).json({
+      success: true,
+      message: "Login Successful",
+      token: token,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+      },
+    });
+
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+
+// Get Logged-in User Profile
+const getProfile = async (req, res) => {
+  res.status(200).json({
+    success: true,
+    user: req.user,
+  });
+};
+
+module.exports = {
+  registerUser,
+  loginUser,
+  getProfile,
+};
