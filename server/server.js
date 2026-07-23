@@ -3,12 +3,14 @@ const express = require("express");
 const dotenv = require("dotenv");
 const cors = require("cors");
 
+
 // Import DB
 const connectDB = require("./database/db");
 
 // Import Routes
 const authRoutes = require("./routes/authRoutes");
 const pizzaRoutes = require("./routes/pizzaRoutes");
+const cartRoutes = require("./routes/cartRoutes");
 
 // Load .env
 dotenv.config();
@@ -29,6 +31,7 @@ app.get("/", (req, res) => {
 
 app.use("/api/auth", authRoutes);
 app.use("/api/pizzas", pizzaRoutes);
+app.use("/api/cart", cartRoutes);
 
 const PORT = process.env.PORT || 5000;
 
